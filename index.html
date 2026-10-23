@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NBA Brasil — Jogos, Transmissões e Resultados</title>
+  <meta name="description" content="Agenda diária da NBA no horário de Brasília, onde assistir no Brasil, resultados e classificação." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topo">
+    <h1>🏀 NBA <span>Brasil</span></h1>
+    <nav class="abas">
+      <button id="aba-jogos" class="aba ativa" data-view="jogos">Jogos</button>
+      <button id="aba-tabela" class="aba" data-view="tabela">Classificação</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="view-jogos" class="view">
+      <div id="dias" class="dias"></div>
+      <div class="filtros">
+        <label><input type="checkbox" id="so-tv" /> Só jogos com transmissão na TV/streaming BR</label>
+        <button id="btn-atualizar" class="btn">↻ Atualizar</button>
+      </div>
+      <div id="jogos" class="grade"></div>
+    </section>
+
+    <section id="view-tabela" class="view oculto">
+      <div id="tabela" class="tabelas"></div>
+    </section>
+  </main>
+
+  <footer>Dados: ESPN · Horários de Brasília · Atualiza automaticamente a cada 60s</footer>
+  <script src="app.js"></script>
+</body>
+</html>

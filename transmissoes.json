@@ -1,0 +1,5 @@
+{
+  "_comentario": "Ajuste manual de transmissões no Brasil. Chave = ID do jogo ESPN (aparece no card) OU 'AWAY@HOME' (ex: 'CHI@MIL'). Valor = lista de canais.",
+  "padrao": ["NBA League Pass"],
+  "jogos": {}
+}
