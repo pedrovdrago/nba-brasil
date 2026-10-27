@@ -8,6 +8,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
+  <link rel="manifest" href="/manifest.json" />
+  <meta name="theme-color" content="#0b0f1a" />
+  <link rel="icon" href="/icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 </head>
 <body>
   <header class="topo">
@@ -15,6 +19,7 @@
     <nav class="abas">
       <button id="aba-jogos" class="aba ativa" data-view="jogos">Jogos</button>
       <button id="aba-tabela" class="aba" data-view="tabela">Classificação</button>
+      <button id="aba-lideres" class="aba" data-view="lideres">Líderes</button>
     </nav>
   </header>
 
@@ -31,9 +36,18 @@
     <section id="view-tabela" class="view oculto">
       <div id="tabela" class="tabelas"></div>
     </section>
+
+    <section id="view-lideres" class="view oculto">
+      <div id="lideres" class="tabelas"></div>
+    </section>
+
+    <section id="view-detalhe" class="view oculto">
+      <div id="detalhe"></div>
+    </section>
   </main>
 
   <footer>Dados: ESPN · Horários de Brasília · Atualiza automaticamente a cada 60s</footer>
+  <script src="detalhes.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -33,7 +33,9 @@ function canaisDoJogo(ev) {
   const manual = overrides.jogos[ev.id] || overrides.jogos[`${away}@${home}`];
   if (manual) return { lista: manual, tv: true };
   const nomes = comp.competitors.map(c => c.team.name);
-  const ehHoje = new Date(ev.date).toLocaleDateString('en-CA', { timeZone: TZ }) === hojeBR();
+  // "Rodada" de hoje = das 06h de hoje às 06h de amanhã (jogos de 0h/1h pertencem à rodada anterior)
+  const ehHoje = new Date(new Date(ev.date).getTime() - 6 * 36e5).toLocaleDateString('en-CA', { timeZone: TZ })
+    === new Date(Date.now() - 6 * 36e5).toLocaleDateString('en-CA', { timeZone: TZ });
   const lb = ehHoje && lakersBR.find(j => nomes.every(n => j.times.some(t => mesmoTime(n, t))));
   if (lb && lb.canais.length) return { lista: lb.canais, tv: lb.canais.some(c => !/league pass/i.test(c)) };
   const api = new Set();
@@ -102,12 +104,12 @@ async function carregarJogos() {
         const p = c.leaders?.find(l => l.name === 'points')?.leaders?.[0];
         return p ? `${p.athlete.shortName} ${p.displayValue} pts` : '';
       }).filter(Boolean).join(' · ') : '';
-      return `<article class="jogo" id="jogo-${ev.id}" style="animation-delay:${i * 40}ms">
+      return `<a class="jogo" id="jogo-${ev.id}" href="#/jogo/${ev.id}" style="animation-delay:${i * 40}ms">
         <div class="status">${statusTxt}<span>${comp.venue?.fullName || ''}</span></div>
         ${linhaTime(away, final, away.winner)}${linhaTime(home, final, home.winner)}
         ${lid ? `<div class="lideres">🔥 ${lid}</div>` : ''}
         <div class="canais">📺 ${lista.map(n => `<span class="canal ${classeCanal(n)}">${n}</span>`).join('')}</div>
-      </article>`;
+      </a>`;
     }).join('');
   } catch (e) {
     el.innerHTML = '<p class="vazio">Erro ao carregar jogos. Tente atualizar.</p>';
@@ -124,7 +126,7 @@ async function carregarTabela() {
   el.innerHTML = (data.children || []).map(conf => {
     const linhas = [...conf.standings.entries]
       .sort((a, b) => parseFloat(stat(b, 'winPercent')) - parseFloat(stat(a, 'winPercent')))
-      .map((e, i) => `<tr><td>${i + 1}</td><td><img src="${e.team.logos?.[0]?.href}" alt="">${e.team.shortDisplayName}</td>
+      .map((e, i) => `<tr><td>${i + 1}</td><td><a href="#/time/${e.team.id}"><img src="${e.team.logos?.[0]?.href}" alt="">${e.team.shortDisplayName}</a></td>
         <td>${stat(e, 'wins')}</td><td>${stat(e, 'losses')}</td><td>${stat(e, 'winPercent')}</td>
         <td>${stat(e, 'gamesBehind')}</td><td>${stat(e, 'streak')}</td></tr>`).join('');
     return `<div class="conf"><h2>${conf.name}</h2><table>
@@ -133,19 +135,35 @@ async function carregarTabela() {
   }).join('');
 }
 
+// ---------- rotas (#/jogos, #/tabela, #/lideres, #/jogo/ID, #/jogador/ID, #/time/ID) ----------
+function rotear() {
+  const [, rota = 'jogos', id] = (location.hash || '#/jogos').split('/');
+  const detalhe = ['jogo', 'jogador', 'time'].includes(rota);
+  const view = detalhe ? 'detalhe' : rota;
+  document.querySelectorAll('.view').forEach(v => v.classList.toggle('oculto', v.id !== 'view-' + view));
+  document.querySelectorAll('.abas .aba').forEach(b => b.classList.toggle('ativa', b.dataset.view === rota));
+  if (rota !== 'jogo') clearTimeout(timerJogo);
+  window.scrollTo(0, 0);
+  if (rota === 'tabela') carregarTabela();
+  else if (rota === 'lideres') viewLideres();
+  else if (rota === 'jogo') viewJogo(id);
+  else if (rota === 'jogador') viewJogador(id);
+  else if (rota === 'time') viewTime(id);
+}
+
 // ---------- init ----------
-document.querySelectorAll('.aba').forEach(b => b.onclick = () => {
-  document.querySelectorAll('.aba').forEach(x => x.classList.toggle('ativa', x === b));
-  document.querySelectorAll('.view').forEach(v => v.classList.toggle('oculto', v.id !== 'view-' + b.dataset.view));
-  if (b.dataset.view === 'tabela') carregarTabela();
-});
+document.querySelectorAll('.abas .aba').forEach(b => b.onclick = () => { location.hash = '#/' + b.dataset.view; });
+window.addEventListener('hashchange', rotear);
 document.getElementById('btn-atualizar').onclick = carregarJogos;
 document.getElementById('so-tv').onchange = carregarJogos;
 
 (async () => {
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
   try { overrides = await (await fetch('transmissoes.json', { cache: 'no-store' })).json(); } catch {}
   try { lakersBR = (await (await fetch('/api/transmissoes')).json()).jogos || []; } catch {}
   renderDias();
   carregarJogos();
-  setInterval(carregarJogos, 60000);
+  rotear();
+  // atualiza placares a cada 60s só quando a lista de jogos está visível
+  setInterval(() => { if (!document.getElementById('view-jogos').classList.contains('oculto')) carregarJogos(); }, 60000);
 })();
