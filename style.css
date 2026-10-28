@@ -55,9 +55,106 @@ main{max-width:1200px;margin:0 auto;padding:1.5rem}
 table{width:100%;border-collapse:collapse;font-size:.9rem}
 th,td{padding:.45rem;text-align:center}
 th{color:var(--mut);font-weight:400;font-size:.8rem}
-td:nth-child(2),th:nth-child(2){text-align:left}
-tr:nth-child(6) td{border-bottom:2px solid var(--verde)}
-tr:nth-child(10) td{border-bottom:2px dashed var(--laranja)}
+.conf td:nth-child(2),.conf th:nth-child(2){text-align:left}
+.conf tr:nth-child(6) td{border-bottom:2px solid var(--verde)}
+.conf tr:nth-child(10) td{border-bottom:2px dashed var(--laranja)}
 td img{width:22px;vertical-align:middle;margin-right:.4rem}
 footer{text-align:center;color:var(--mut);padding:2rem;font-size:.85rem}
-@media(max-width:500px){.grade,.tabelas{grid-template-columns:1fr}.topo{padding:1rem}}
+
+/* links */
+a{color:inherit;text-decoration:none}
+.conf a:hover,.box a:hover,.perfil a:hover{color:var(--laranja)}
+a.jogo{display:block;cursor:pointer}
+.mut{color:var(--mut)}
+.flex1{flex:1;min-width:0}
+.res-v{color:var(--verde)}.res-d{color:var(--verm)}
+
+/* detalhe */
+.voltar{margin-bottom:1rem}
+.card-det{background:var(--card);border:1px solid var(--borda);border-radius:18px;padding:1rem;margin-bottom:1rem;animation:sobe .35s ease both}
+.card-det h3{display:flex;align-items:center;gap:.5rem;margin-bottom:.7rem;font-size:1.05rem}
+.card-det h3 img{width:28px}
+.rolagem{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+.placar-grande{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1.4rem;border-radius:22px;margin-bottom:1rem;
+  background:linear-gradient(135deg,hsl(22 95% 56%/.18),hsl(220 90% 60%/.18));border:1px solid var(--borda)}
+.pl-time{display:flex;flex-direction:column;align-items:center;gap:.2rem;flex:1}
+.pl-time img{width:64px;height:64px;transition:.2s}
+.pl-time:hover img{transform:scale(1.08)}
+.pl-time small{color:var(--mut)}
+.pl-time.perdeu{opacity:.55}
+.pl-centro{text-align:center}
+.pl-pts{font-size:2.4rem;font-weight:800;white-space:nowrap}
+.pl-pts span{color:var(--mut);font-weight:400}
+.pl-status{color:var(--mut)}
+.quartos{max-width:520px;margin:0 auto 1rem;background:var(--card);border-radius:14px}
+.quartos td:first-child{font-weight:600}
+.sub-abas{display:flex;gap:.4rem;background:var(--card);padding:.3rem;border-radius:999px;margin-bottom:1rem;width:max-content;max-width:100%;overflow-x:auto}
+
+table.box{font-size:.85rem;white-space:nowrap}
+table.box th,table.box td{padding:.45rem .55rem;border-bottom:1px solid var(--borda)}
+table.box .fixa{text-align:left;position:sticky;left:0;background:#121828;z-index:1}
+table.box .fixa small{display:block;color:var(--mut);font-size:.7rem}
+table.box tr.titular .fixa a{font-weight:600}
+table.box tr.dnp td{color:var(--mut);font-style:italic}
+table.box tr.total td{font-weight:700;border-top:2px solid var(--borda)}
+table.comparar td{font-size:1.05rem;font-weight:600}
+table.comparar th{color:var(--mut)}
+table.comparar thead img{width:24px;vertical-align:middle}
+
+.q-lista{margin-bottom:.8rem}
+.q-btn{font:inherit;color:var(--txt)}
+.lances{list-style:none;padding:.4rem}
+.lances li{display:flex;align-items:center;gap:.6rem;padding:.55rem .4rem;border-bottom:1px solid var(--borda);font-size:.9rem}
+.lances li img,.lances .sem-logo{width:22px;height:22px;flex:0 0 22px}
+.lances .relogio{color:var(--mut);width:42px;flex:0 0 42px;font-variant-numeric:tabular-nums}
+.lances .texto{flex:1}
+.lances .parcial{font-weight:600;font-variant-numeric:tabular-nums}
+.lances li.cesta{background:hsl(22 95% 56%/.08)}
+.lances li.cesta .texto{font-weight:600}
+
+.perfil{display:flex;align-items:center;gap:1.2rem;padding:1.3rem;border-radius:22px;margin-bottom:1rem;border:1px solid var(--borda);
+  background:linear-gradient(135deg,color-mix(in srgb,var(--cor) 55%,transparent),var(--card))}
+.perfil .foto{width:110px;height:110px;object-fit:cover;border-radius:50%;background:rgba(255,255,255,.08)}
+.perfil .foto.logo{object-fit:contain;border-radius:0;background:none}
+.perfil h2{font-size:1.6rem}
+.perfil h2 span{color:var(--mut);font-weight:400}
+.perfil p{margin-top:.2rem}
+.destaques{display:grid;grid-template-columns:repeat(4,1fr);gap:.6rem;margin-bottom:1rem}
+.destaques div{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:.8rem;text-align:center}
+.destaques b{display:block;font-size:1.6rem;background:linear-gradient(90deg,var(--laranja),#ffd84d);-webkit-background-clip:text;color:transparent}
+.destaques small{color:var(--mut)}
+
+.duas-col{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.linha-jogo{display:flex;align-items:center;gap:.6rem;padding:.55rem .3rem;border-bottom:1px solid var(--borda);transition:.2s}
+.linha-jogo:hover{background:rgba(255,255,255,.04)}
+.linha-jogo img{width:26px}
+.linha-jogo>span:first-child{color:var(--mut);width:14px}
+.elenco{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:.6rem}
+.jogador-card{display:flex;align-items:center;gap:.7rem;padding:.5rem;border-radius:14px;transition:.2s}
+.jogador-card:hover{background:rgba(255,255,255,.06)}
+.jogador-card img{width:48px;height:48px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.08)}
+.jogador-card small,.lider small{display:block;color:var(--mut);font-size:.75rem}
+
+.lider{display:flex;align-items:center;gap:.7rem;padding:.45rem .3rem;border-bottom:1px solid var(--borda);transition:.2s}
+.lider:hover{background:rgba(255,255,255,.05)}
+.lider .pos{width:18px;color:var(--mut)}
+.lider img{width:40px;height:40px;border-radius:50%;object-fit:cover;background:rgba(255,255,255,.08)}
+.lider b{font-size:1.15rem}
+.lider.top{background:linear-gradient(90deg,hsl(22 95% 56%/.18),transparent);border-radius:12px}
+.lider.top img{width:52px;height:52px}
+
+@media(max-width:600px){
+  .grade,.tabelas,.duas-col{grid-template-columns:1fr}
+  .topo{padding:.8rem 1rem}
+  main{padding:1rem .7rem}
+  .abas{width:100%;justify-content:space-between}
+  .aba{padding:.45rem .8rem;font-size:.9rem}
+  .placar-grande{padding:1rem .6rem}
+  .pl-time img{width:46px;height:46px}
+  .pl-pts{font-size:1.7rem}
+  .perfil .foto{width:80px;height:80px}
+  .perfil h2{font-size:1.25rem}
+  .destaques{grid-template-columns:repeat(2,1fr)}
+  .tabelas{gap:.8rem}
+}
