@@ -12,6 +12,7 @@ const ROTAS = {
   roster:   id => [`${SITE}/teams/${id}/roster?${Q}`, 3600],          // elenco
   schedule: id => [`${SITE}/teams/${id}/schedule?${Q}`, 600],         // calendário do time
   leaders:  sort => [`${WEB}/statistics/byathlete?${Q}&limit=15&contentorigin=espn&sort=${sort}`, 1800],
+  career:   id => [`${WEB}/athletes/${id}/stats?${Q}`, 3600],          // estatísticas ano a ano (carreira)
 };
 
 export default async function handler(req, res) {

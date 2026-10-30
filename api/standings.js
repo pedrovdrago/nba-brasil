@@ -1,6 +1,7 @@
 // Proxy da classificação da NBA (ESPN)
 export default async function handler(req, res) {
-  const url = 'https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?region=br&lang=pt';
+  const season = String(req.query.season || '').replace(/[^0-9]/g, '');
+  const url = `https://site.api.espn.com/apis/v2/sports/basketball/nba/standings?region=br&lang=pt${season ? `&season=${season}` : ''}`;
   try {
     const r = await fetch(url);
     const data = await r.json();
