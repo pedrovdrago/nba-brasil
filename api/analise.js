@@ -24,7 +24,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ date: diaClean, fonte: 'sem_jogos', jogos: {} });
     }
 
-    // Extrai os confrontos e as estrelas/líderes confirmados pela ESPN
     const jogosSimplificados = events.map(ev => {
       const comp = ev.competitions[0];
       const away = comp.competitors.find(c => c.homeAway === 'away');
@@ -68,6 +67,7 @@ export default async function handler(req, res) {
     }
 
     // Se o Gemini falhou ou a chave não existe, NUNCA cacheie o fallback
+    // para permitir que o usuário adicione a chave e veja o Gemini imediatamente
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const fallback = gerarAnaliseHeuristica(jogosSimplificados, diaClean, erroGeminiMsg, Boolean(apiKey));
     return res.status(200).json(fallback);
@@ -178,6 +178,7 @@ async function listarModelosValidos(apiKey) {
         .map(m => m.name.replace(/^models\//, ''));
 
       if (disponiveis.length > 0) {
+        // Ordena priorizando modelos flash modernos e eficientes
         disponiveis.sort((a, b) => {
           const rank = name => {
             if (name.includes('2.5-flash')) return 1;
@@ -194,6 +195,7 @@ async function listarModelosValidos(apiKey) {
   } catch (err) {
     console.warn('Falha ao consultar /models:', err);
   }
+  // Fallback com modelos atuais do Google AI Studio
   return ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 }
 
@@ -212,10 +214,13 @@ function normalizarDestaques(itensIA, jogosOriginais, dataStr, modelo) {
     };
   });
 
+  // Ordena por hype_score decrescente
   lista.sort((a, b) => b.hype_score - a.hype_score);
 
+  // 1. O jogo #1 é SEMPRE destaque obrigatório
   if (lista.length > 0) lista[0].destaque = true;
 
+  // 2. Limita o número de destaques entre 1 e 3
   let totalDestaques = 0;
   lista.forEach((item, index) => {
     if (index === 0) {
@@ -242,6 +247,7 @@ function normalizarDestaques(itensIA, jogosOriginais, dataStr, modelo) {
   };
 }
 
+// Fallback inteligente caso a chave ainda não tenha sido ativada ou ocorra erro
 function gerarAnaliseHeuristica(jogos, dataStr, erroMsg, chaveExistia) {
   const rivalidades = [
     ['Lakers', 'Celtics'], ['Warriors', 'Cavaliers'], ['Knicks', 'Celtics'],
@@ -293,10 +299,6 @@ function gerarAnaliseHeuristica(jogos, dataStr, erroMsg, chaveExistia) {
     dica: chaveExistia
       ? 'A chave GEMINI_API_KEY foi enviada, mas o Google retornou erro. Verifique sua chave no Google AI Studio.'
       : 'Configure a variável GEMINI_API_KEY no painel da Vercel (Settings -> Environment Variables) e faça um Redeploy.',
-    jogos: jogosObj
-  };
-}
-
     jogos: jogosObj
   };
 }
