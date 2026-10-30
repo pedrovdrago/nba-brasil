@@ -1,5 +1,5 @@
 // Service worker: deixa o app instalável e abre mesmo sem internet (mostra últimos dados salvos).
-const CACHE = 'nba-brasil-v3';
+const CACHE = 'nba-brasil-v4';
 const ARQUIVOS = ['/', '/index.html', '/style.css', '/app.js', '/detalhes.js', '/manifest.json', '/icons/icon-192.png'];
 
 self.addEventListener('install', e => {

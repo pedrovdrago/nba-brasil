@@ -218,6 +218,26 @@ document.getElementById('btn-atualizar').onclick = carregarJogos;
 document.getElementById('so-tv').onchange = carregarJogos;
 
 const inputDataEl = document.getElementById('data-escolhida');
+const btnCalEl = document.getElementById('btn-calendario');
+
+if (btnCalEl && inputDataEl) {
+  if (!('showPicker' in HTMLInputElement.prototype)) {
+    // Fallback para navegadores muito antigos: sobrepõe o input invisível sobre o botão
+    inputDataEl.style.width = '100%';
+    inputDataEl.style.height = '100%';
+    inputDataEl.style.pointerEvents = 'auto';
+  } else {
+    btnCalEl.onclick = () => {
+      try {
+        inputDataEl.showPicker();
+      } catch (err) {
+        inputDataEl.focus();
+        inputDataEl.click();
+      }
+    };
+  }
+}
+
 if (inputDataEl) {
   inputDataEl.onchange = (e) => {
     if (e.target.value) {
