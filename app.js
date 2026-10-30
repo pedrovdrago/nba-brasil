@@ -25,6 +25,25 @@ async function scoreboard(ymd) {
     `${ESPN}/site/v2/sports/basketball/nba/scoreboard?region=br&lang=pt&limit=50&dates=${d}`);
 }
 
+// ---------- Análise IA (Gemini) ----------
+window.cacheAnalises = window.cacheAnalises || {};
+
+async function buscarAnalise(ymd) {
+  if (window.cacheAnalises[ymd]) return window.cacheAnalises[ymd];
+  const dClean = ymd.replaceAll('-', '');
+  try {
+    const res = await fetch(`/api/analise?date=${dClean}`);
+    if (res.ok) {
+      const data = await res.json();
+      window.cacheAnalises[ymd] = data.jogos || {};
+      return window.cacheAnalises[ymd];
+    }
+  } catch (e) {
+    console.warn('Erro ao carregar análise IA:', e);
+  }
+  return {};
+}
+
 // ---------- transmissões ----------
 function canaisDoJogo(ev) {
   const comp = ev.competitions[0];
@@ -122,6 +141,9 @@ async function carregarJogos() {
     if (soTv) eventos = eventos.filter(e => canaisDoJogo(e).tv);
     if (!eventos.length) { el.innerHTML = '<p class="vazio">Nenhum jogo neste dia 😴</p>'; return; }
 
+    // Busca a análise da IA para a rodada
+    const mapaAnalise = await buscarAnalise(diaSel);
+
     el.innerHTML = eventos.map((ev, i) => {
       const comp = ev.competitions[0];
       const st = comp.status.type;
@@ -135,7 +157,13 @@ async function carregarJogos() {
         const p = c.leaders?.find(l => l.name === 'points')?.leaders?.[0];
         return p ? `${p.athlete.shortName} ${p.displayValue} pts` : '';
       }).filter(Boolean).join(' · ') : '';
-      return `<a class="jogo" id="jogo-${ev.id}" href="#/jogo/${ev.id}" style="animation-delay:${i * 40}ms">
+
+      const infoIA = mapaAnalise[ev.id] || null;
+      const ehDestaque = Boolean(infoIA?.destaque);
+      const tituloDestaque = infoIA?.titulo_destaque || 'Jogo Imperdível';
+
+      return `<a class="jogo ${ehDestaque ? 'com-foguinho' : ''}" id="jogo-${ev.id}" href="#/jogo/${ev.id}" style="animation-delay:${i * 40}ms">
+        ${ehDestaque ? `<div class="badge-fogo"><span class="chama-icone">🔥</span> ${tituloDestaque}</div>` : ''}
         <div class="status">${statusTxt}<span>${comp.venue?.fullName || ''}</span></div>
         ${linhaTime(away, final, away.winner)}${linhaTime(home, final, home.winner)}
         ${lid ? `<div class="lideres">🔥 ${lid}</div>` : ''}
@@ -263,6 +291,8 @@ if (btnHojeEl) {
   renderDias();
   carregarJogos();
   rotear();
+  // Pré-carrega análise do dia seguinte em segundo plano
+  buscarAnalise(hojeBR(1));
   // atualiza placares a cada 60s só quando a lista de jogos está visível
   setInterval(() => { if (!document.getElementById('view-jogos').classList.contains('oculto')) carregarJogos(); }, 60000);
 })();

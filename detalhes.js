@@ -13,6 +13,24 @@ const voltar = '<button class="btn voltar" onclick="history.length > 1 ? history
 const lnkJog = (id, nome) => `<a href="#/jogador/${id}">${nome}</a>`;
 let timerJogo = null;
 
+async function obterAnaliseJogo(gameId, dateIso) {
+  const ymd = dateIso ? new Date(dateIso).toLocaleDateString('en-CA', { timeZone: TZ }) : diaSel;
+  if (window.cacheAnalises?.[ymd]?.[gameId]) {
+    return window.cacheAnalises[ymd][gameId];
+  }
+  try {
+    const dClean = ymd.replaceAll('-', '');
+    const res = await fetch(`/api/analise?date=${dClean}`);
+    if (res.ok) {
+      const data = await res.json();
+      window.cacheAnalises = window.cacheAnalises || {};
+      window.cacheAnalises[ymd] = data.jogos || {};
+      return window.cacheAnalises[ymd]?.[gameId] || null;
+    }
+  } catch {}
+  return null;
+}
+
 // ===================== JOGO =====================
 let jogoAba = 'box', jogoQuarto = 0;
 
@@ -27,6 +45,24 @@ async function viewJogo(id, silencioso = false) {
     const home = comp.competitors.find(c => c.homeAway === 'home');
     const status = st.state === 'in' ? `<span class="aovivo">AO VIVO · ${comp.status.displayClock} ${comp.status.period}ºQ</span>`
       : st.completed ? 'Final' : fmtHora(comp.date) + ' · ' + new Date(comp.date).toLocaleDateString('pt-BR', { timeZone: TZ });
+
+    // Busca a análise da IA para este jogo
+    const infoIA = await obterAnaliseJogo(id, comp.date);
+    const cardIA = infoIA?.motivo ? `
+      <section class="card-det card-analise-ia ${infoIA.destaque ? 'ia-destaque' : ''}">
+        <div class="analise-ia-topo">
+          <div class="analise-ia-tag">
+            <span class="ai-sparkle">✨</span>
+            <span>Por que assistir? · Análise da IA</span>
+          </div>
+          <div class="analise-ia-hype">
+            ${infoIA.destaque ? '<span class="fogo-tag">🔥 Imperdível</span>' : ''}
+            <span>Índice de Interesse: <b>${infoIA.hype_score}/100</b></span>
+          </div>
+        </div>
+        <p class="analise-ia-texto">${infoIA.motivo}</p>
+      </section>
+    ` : '';
 
     const placarTime = c => `<a class="pl-time ${st.completed && !c.winner ? 'perdeu' : ''}" href="#/time/${c.team.id}">
       <img src="${c.team.logos?.[0]?.href || c.team.logo || ''}" alt=""><b>${c.team.abbreviation}</b><small>${c.record?.[0]?.summary || ''}</small></a>`;
@@ -44,6 +80,7 @@ async function viewJogo(id, silencioso = false) {
         <div class="pl-centro"><div class="pl-pts">${away.score ?? ''} <span>×</span> ${home.score ?? ''}</div><div class="pl-status">${status}</div></div>
         ${placarTime(home)}
       </section>
+      ${cardIA}
       ${quartos}
       <nav class="sub-abas">
         <button id="j-box" class="aba ${jogoAba === 'box' ? 'ativa' : ''}">Box score</button>
