@@ -25,7 +25,16 @@
 
   <main>
     <section id="view-jogos" class="view">
-      <div id="dias" class="dias"></div>
+      <div class="barra-dias-wrap">
+        <div id="dias" class="dias"></div>
+        <div class="seletor-data-wrap">
+          <label for="data-escolhida" class="btn btn-calendario" title="Escolher qualquer data histórica">
+            📅 <span id="label-calendario">Calendário</span>
+            <input type="date" id="data-escolhida" />
+          </label>
+          <button id="btn-hoje" class="btn btn-hoje oculto" title="Voltar para hoje">Hoje</button>
+        </div>
+      </div>
       <div class="filtros">
         <label><input type="checkbox" id="so-tv" /> Só jogos com transmissão na TV/streaming BR</label>
         <button id="btn-atualizar" class="btn">↻ Atualizar</button>
@@ -34,6 +43,10 @@
     </section>
 
     <section id="view-tabela" class="view oculto">
+      <div class="filtro-temporada">
+        <label for="sel-temporada">Temporada:</label>
+        <select id="sel-temporada" class="select-moderno"></select>
+      </div>
       <div id="tabela" class="tabelas"></div>
     </section>
 

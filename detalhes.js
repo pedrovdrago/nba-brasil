@@ -115,7 +115,12 @@ function lances(s, away, home) {
 async function viewJogador(id) {
   carregando();
   try {
-    const [a, ov, gl] = await Promise.all([espn('athlete', id), espn('overview', id).catch(() => null), espn('gamelog', id).catch(() => null)]);
+    const [a, ov, gl, car] = await Promise.all([
+      espn('athlete', id),
+      espn('overview', id).catch(() => null),
+      espn('gamelog', id).catch(() => null),
+      espn('career', id).catch(() => null)
+    ]);
     const p = a.athlete;
     const cor = p.team?.color ? '#' + p.team.color : '#333';
 
@@ -129,6 +134,19 @@ async function viewJogador(id) {
       const temp = ov.statistics.splits[0].stats;
       medias = `<div class="destaques">${[['PTS', 'Pontos'], ['REB', 'Rebotes'], ['AST', 'Assist.'], ['FG%', 'Arremesso %']]
         .filter(([k]) => idx(k) >= 0).map(([k, n]) => `<div><b>${temp[idx(k)]}</b><small>${n}</small></div>`).join('')}</div>` + medias;
+    }
+
+    let historico = '';
+    if (car?.categories?.length) {
+      const cat = car.categories.find(c => c.name === 'averages') || car.categories[0];
+      if (cat?.statistics?.length) {
+        const L = cat.labels;
+        const linhas = [...cat.statistics].reverse().map(s => {
+          const rotulo = s.season?.displayName || s.season?.year || '-';
+          return `<tr><td class="fixa"><b>${rotulo}</b></td>${s.stats.map(v => `<td>${v}</td>`).join('')}</tr>`;
+        }).join('');
+        historico = `<div class="card-det"><h3>Histórico na Carreira (Ano a Ano)</h3><div class="rolagem"><table class="box"><thead><tr><th class="fixa">Temporada</th>${L.map(l => `<th>${l}</th>`).join('')}</tr></thead><tbody>${linhas}</tbody></table></div></div>`;
+      }
     }
 
     let jogos = '';
@@ -152,7 +170,7 @@ async function viewJogador(id) {
           <p class="mut">${[p.age && p.age + ' anos', p.displayHeight, p.displayWeight, p.displayBirthPlace].filter(Boolean).join(' · ')}</p>
         </div>
       </section>
-      ${medias}${jogos}`;
+      ${medias}${historico}${jogos}`;
   } catch (e) { erro(e); }
 }
 

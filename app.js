@@ -54,16 +54,47 @@ function classeCanal(n) {
 function renderDias() {
   const el = document.getElementById('dias');
   el.innerHTML = '';
-  for (let i = -3; i <= 7; i++) {
-    const ymd = hojeBR(i);
-    const d = new Date(ymd + 'T12:00:00');
-    const rot = i === 0 ? 'Hoje' : i === -1 ? 'Ontem' : i === 1 ? 'Amanhã' : d.toLocaleDateString('pt-BR', { weekday: 'short' });
-    const b = document.createElement('div');
-    b.className = 'dia' + (ymd === diaSel ? ' ativo' : '');
-    b.id = 'dia-' + ymd;
-    b.innerHTML = `<small>${rot}</small><b>${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</b>`;
-    b.onclick = () => { diaSel = ymd; renderDias(); carregarJogos(); };
-    el.appendChild(b);
+  const hoje = hojeBR();
+  const dSel = new Date(diaSel + 'T12:00:00');
+  const dHoje = new Date(hoje + 'T12:00:00');
+  const diffDias = Math.round((dSel - dHoje) / 864e5);
+
+  // Se estiver no intervalo comum de dias (-3 a +7 de hoje)
+  if (diffDias >= -3 && diffDias <= 7) {
+    for (let i = -3; i <= 7; i++) {
+      const ymd = hojeBR(i);
+      const d = new Date(ymd + 'T12:00:00');
+      const rot = i === 0 ? 'Hoje' : i === -1 ? 'Ontem' : i === 1 ? 'Amanhã' : d.toLocaleDateString('pt-BR', { weekday: 'short' });
+      const b = document.createElement('div');
+      b.className = 'dia' + (ymd === diaSel ? ' ativo' : '');
+      b.id = 'dia-' + ymd;
+      b.innerHTML = `<small>${rot}</small><b>${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</b>`;
+      b.onclick = () => { diaSel = ymd; renderDias(); carregarJogos(); };
+      el.appendChild(b);
+    }
+  } else {
+    // Data histórica selecionada: mostra janela de 5 dias em torno da data
+    for (let i = -2; i <= 2; i++) {
+      const dOffset = new Date(dSel.getTime() + i * 864e5);
+      const ymd = dOffset.toLocaleDateString('en-CA');
+      const rot = i === 0 ? 'Escolhida' : dOffset.toLocaleDateString('pt-BR', { weekday: 'short' });
+      const b = document.createElement('div');
+      b.className = 'dia' + (ymd === diaSel ? ' ativo' : '');
+      b.id = 'dia-' + ymd;
+      b.innerHTML = `<small>${rot}</small><b>${dOffset.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</b><span class="ano-sub">${dOffset.getFullYear()}</span>`;
+      b.onclick = () => { diaSel = ymd; renderDias(); carregarJogos(); };
+      el.appendChild(b);
+    }
+  }
+
+  // Controles do seletor de calendário e atalho de voltar para hoje
+  const inputData = document.getElementById('data-escolhida');
+  if (inputData) inputData.value = diaSel;
+  const btnHoje = document.getElementById('btn-hoje');
+  if (btnHoje) btnHoje.classList.toggle('oculto', diaSel === hoje);
+  const lbl = document.getElementById('label-calendario');
+  if (lbl) {
+    lbl.textContent = diaSel === hoje ? 'Calendário' : dSel.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit' });
   }
 }
 
@@ -117,16 +148,45 @@ async function carregarJogos() {
   }
 }
 
-// ---------- classificação ----------
-async function carregarTabela() {
+// ---------- classificação histórica ----------
+let temporadaSel = '';
+
+function popularSeletorTemporadas() {
+  const sel = document.getElementById('sel-temporada');
+  if (!sel || sel.options.length > 0) return;
+  // A temporada da NBA usa o ano de término (ex: 2026-27 = 2027 na ESPN)
+  const anoAtual = new Date().getFullYear() + 1;
+  for (let ano = anoAtual; ano >= 2002; ano--) {
+    const opt = document.createElement('option');
+    opt.value = ano;
+    const inicio = ano - 1;
+    const fim = String(ano).slice(2);
+    opt.textContent = `${inicio}-${fim}${ano === anoAtual ? ' (Atual)' : ''}`;
+    sel.appendChild(opt);
+  }
+  sel.onchange = () => {
+    temporadaSel = sel.value;
+    carregarTabela(temporadaSel);
+  };
+}
+
+async function carregarTabela(ano) {
+  popularSeletorTemporadas();
   const el = document.getElementById('tabela');
   el.innerHTML = '<p class="vazio">Carregando…</p>';
-  const data = await buscarJSON('/api/standings', `${ESPN}/v2/sports/basketball/nba/standings?region=br&lang=pt`);
-  const stat = (e, n) => e.stats.find(s => s.name === n || s.type === n)?.displayValue ?? '-';
+  const sel = document.getElementById('sel-temporada');
+  const temp = ano || (sel ? sel.value : '') || '';
+  const q = temp ? `?season=${temp}` : '';
+  const data = await buscarJSON(`/api/standings${q}`, `${ESPN}/v2/sports/basketball/nba/standings?region=br&lang=pt${temp ? `&season=${temp}` : ''}`);
+  const stat = (e, n) => e.stats?.find(s => s.name === n || s.type === n)?.displayValue ?? '-';
+  if (!data?.children?.length) {
+    el.innerHTML = '<p class="vazio">Classificação não disponível para esta temporada.</p>';
+    return;
+  }
   el.innerHTML = (data.children || []).map(conf => {
     const linhas = [...conf.standings.entries]
       .sort((a, b) => parseFloat(stat(b, 'winPercent')) - parseFloat(stat(a, 'winPercent')))
-      .map((e, i) => `<tr><td>${i + 1}</td><td><a href="#/time/${e.team.id}"><img src="${e.team.logos?.[0]?.href}" alt="">${e.team.shortDisplayName}</a></td>
+      .map((e, i) => `<tr><td>${i + 1}</td><td><a href="#/time/${e.team.id}"><img src="${e.team.logos?.[0]?.href || ''}" alt="">${e.team.shortDisplayName}</a></td>
         <td>${stat(e, 'wins')}</td><td>${stat(e, 'losses')}</td><td>${stat(e, 'winPercent')}</td>
         <td>${stat(e, 'gamesBehind')}</td><td>${stat(e, 'streak')}</td></tr>`).join('');
     return `<div class="conf"><h2>${conf.name}</h2><table>
@@ -156,6 +216,25 @@ document.querySelectorAll('.abas .aba').forEach(b => b.onclick = () => { locatio
 window.addEventListener('hashchange', rotear);
 document.getElementById('btn-atualizar').onclick = carregarJogos;
 document.getElementById('so-tv').onchange = carregarJogos;
+
+const inputDataEl = document.getElementById('data-escolhida');
+if (inputDataEl) {
+  inputDataEl.onchange = (e) => {
+    if (e.target.value) {
+      diaSel = e.target.value;
+      renderDias();
+      carregarJogos();
+    }
+  };
+}
+const btnHojeEl = document.getElementById('btn-hoje');
+if (btnHojeEl) {
+  btnHojeEl.onclick = () => {
+    diaSel = hojeBR();
+    renderDias();
+    carregarJogos();
+  };
+}
 
 (async () => {
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
