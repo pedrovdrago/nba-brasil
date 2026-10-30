@@ -24,16 +24,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ date: diaClean, fonte: 'sem_jogos', jogos: {} });
     }
 
+    // Extrai os confrontos e as estrelas/líderes confirmados pela ESPN
     const jogosSimplificados = events.map(ev => {
       const comp = ev.competitions[0];
       const away = comp.competitors.find(c => c.homeAway === 'away');
       const home = comp.competitors.find(c => c.homeAway === 'home');
+      const awayLideres = extrairLideresAtuais(away);
+      const homeLideres = extrairLideresAtuais(home);
+
       return {
         id: ev.id,
+        temporada: ev.season?.displayName || `${ev.season?.year || ''}`,
         away: away?.team?.displayName || 'Visitante',
         awayRecord: away?.records?.[0]?.summary || '',
+        awayLideresAtuais: awayLideres.length ? awayLideres.join(', ') : 'Não informado',
         home: home?.team?.displayName || 'Mandante',
         homeRecord: home?.records?.[0]?.summary || '',
+        homeLideresAtuais: homeLideres.length ? homeLideres.join(', ') : 'Não informado',
         dataHora: ev.date
       };
     });
@@ -61,7 +68,6 @@ export default async function handler(req, res) {
     }
 
     // Se o Gemini falhou ou a chave não existe, NUNCA cacheie o fallback
-    // para permitir que o usuário adicione a chave e veja o Gemini imediatamente
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
     const fallback = gerarAnaliseHeuristica(jogosSimplificados, diaClean, erroGeminiMsg, Boolean(apiKey));
     return res.status(200).json(fallback);
@@ -72,23 +78,39 @@ export default async function handler(req, res) {
   }
 }
 
+function extrairLideresAtuais(competitor) {
+  if (!competitor?.leaders) return [];
+  const lista = [];
+  (competitor.leaders || []).forEach(cat => {
+    (cat.leaders || []).forEach(item => {
+      if (item.athlete?.displayName) {
+        lista.push(`${item.athlete.displayName} (${cat.abbreviation || cat.name || 'Líder'})`);
+      }
+    });
+  });
+  return Array.from(new Set(lista)).slice(0, 4);
+}
+
 async function analisarComGemini(jogos, apiKey, dataStr) {
   const prompt = `Você é um comentarista e jornalista da NBA altamente especializado no público brasileiro.
 Hoje é a data ${dataStr}. Analise detalhadamente os seguintes confrontos da rodada da NBA:
 
 ${JSON.stringify(jogos, null, 2)}
 
-INSTRUÇÕES OBRIGATÓRIAS:
-1. Para CADA jogo, faça uma análise ÚNICA, vibrante e autêntica. MENCIONE NOMES DE JOGADORES ESTRELAS dos times envolvidos, rivalidades, fase recente e o peso da partida na tabela. NUNCA use frases repetidas ou genéricas como "Partida competitiva entre X e Y".
-2. Atribua um "hype_score" de 0 a 100 para cada jogo.
-3. Crie um campo "motivo": exatamente UM parágrafo direto, dinâmico e empolgante (em português do Brasil, de 180 a 350 caracteres) explicando por que este confronto específico vale a pena ser assistido.
-4. Crie um campo "destaque" (boolean) para indicar quais jogos recebem o efeito visual de FOGO/CHAMA no site:
+INSTRUÇÕES CRÍTICAS SOBRE ELENCOS E JOGADORES:
+1. ATENÇÃO AOS ELENCOS ATUAIS: Utilize EXCLUSIVAMENTE os jogadores que estão atualmente nos elencos de cada time (baseie-se nos campos "awayLideresAtuais" e "homeLideresAtuais" fornecidos acima).
+2. NUNCA cite jogadores antigos ou atletas trocados que não jogam mais nessa equipe (exemplo: NÃO cite Klay Thompson nos Warriors, NÃO cite Kyrie Irving nos Celtics/Nets, NÃO cite Damian Lillard nos Blazers, NÃO cite Paul George nos Clippers, NÃO cite DeMar DeRozan nos Bulls, NÃO cite Karl-Anthony Towns nos Timberwolves).
+3. Se um time não tiver líderes listados, mencione apenas as estrelas atuais confirmadas da franquia ou foque no estilo de jogo coletivo, momento na tabela e rivalidade.
+4. Para CADA jogo, gere uma análise ÚNICA, vibrante e autêntica. MENCIONE NOMES DE JOGADORES ATUAIS, fase recente e o peso da partida na classificação. NUNCA use frases repetidas ou genéricas.
+5. Atribua um "hype_score" de 0 a 100 para cada jogo.
+6. Crie um campo "motivo": exatamente UM parágrafo direto, dinâmico e empolgante (em português do Brasil, de 180 a 350 caracteres) explicando por que este confronto específico vale a pena ser assistido hoje.
+7. Crie um campo "destaque" (boolean) para indicar quais jogos recebem o efeito visual de FOGO/CHAMA no site:
    - REGRA DO FOGO:
      * O jogo com maior hype_score DEVE OBRIGATORIAMENTE ter "destaque": true (mínimo 1 jogo com foguinho por dia).
      * Se houver outro confronto imperdível de nível muito próximo (hype >= 85), pode marcar um 2º jogo com "destaque": true.
      * Ocasionalmente um 3º jogo pode ser destaque se for uma rodada épica com múltiplos clássicos decisivos.
      * NUNCA marque mais de 3 jogos como destaque=true. No máximo 3.
-5. Crie um campo "titulo_destaque" curto (ex: "🔥 Duelo de Gigantes", "🔥 Clássico Histórico", "🔥 Batalha de Conferência", etc.).
+8. Crie um campo "titulo_destaque" curto (ex: "🔥 Duelo de Gigantes", "🔥 Clássico Histórico", "🔥 Batalha de Conferência", etc.).
 
 Responda APENAS com um JSON puro no formato:
 {
@@ -98,7 +120,7 @@ Responda APENAS com um JSON puro no formato:
       "hype_score": 95,
       "destaque": true,
       "titulo_destaque": "🔥 Duelo de Titãs",
-      "motivo": "Texto vibrante citando os jogadores e contexto..."
+      "motivo": "Texto vibrante citando apenas jogadores atuais e contexto..."
     }
   ]
 }`;
@@ -156,7 +178,6 @@ async function listarModelosValidos(apiKey) {
         .map(m => m.name.replace(/^models\//, ''));
 
       if (disponiveis.length > 0) {
-        // Ordena priorizando modelos flash modernos e eficientes
         disponiveis.sort((a, b) => {
           const rank = name => {
             if (name.includes('2.5-flash')) return 1;
@@ -173,7 +194,6 @@ async function listarModelosValidos(apiKey) {
   } catch (err) {
     console.warn('Falha ao consultar /models:', err);
   }
-  // Fallback com modelos atuais do Google AI Studio
   return ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 }
 
@@ -192,13 +212,10 @@ function normalizarDestaques(itensIA, jogosOriginais, dataStr, modelo) {
     };
   });
 
-  // Ordena por hype_score decrescente
   lista.sort((a, b) => b.hype_score - a.hype_score);
 
-  // 1. O jogo #1 é SEMPRE destaque obrigatório
   if (lista.length > 0) lista[0].destaque = true;
 
-  // 2. Limita o número de destaques entre 1 e 3
   let totalDestaques = 0;
   lista.forEach((item, index) => {
     if (index === 0) {
@@ -225,7 +242,6 @@ function normalizarDestaques(itensIA, jogosOriginais, dataStr, modelo) {
   };
 }
 
-// Fallback inteligente caso a chave ainda não tenha sido ativada ou ocorra erro
 function gerarAnaliseHeuristica(jogos, dataStr, erroMsg, chaveExistia) {
   const rivalidades = [
     ['Lakers', 'Celtics'], ['Warriors', 'Cavaliers'], ['Knicks', 'Celtics'],
@@ -277,6 +293,10 @@ function gerarAnaliseHeuristica(jogos, dataStr, erroMsg, chaveExistia) {
     dica: chaveExistia
       ? 'A chave GEMINI_API_KEY foi enviada, mas o Google retornou erro. Verifique sua chave no Google AI Studio.'
       : 'Configure a variável GEMINI_API_KEY no painel da Vercel (Settings -> Environment Variables) e faça um Redeploy.',
+    jogos: jogosObj
+  };
+}
+
     jogos: jogosObj
   };
 }
