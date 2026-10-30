@@ -103,9 +103,9 @@ Responda APENAS com um JSON puro no formato:
   ]
 }`;
 
-  // Modelos suportados no Google AI Studio
-  const modelos = ['gemini-1.5-flash', 'gemini-1.5-flash-latest', 'gemini-1.5-pro', 'gemini-2.0-flash-exp'];
-  let lastErr = null;
+  // Descobre dinamicamente os modelos ativos na conta do usuário via ListModels da Google API
+  const modelos = await listarModelosValidos(apiKey);
+  const erros = [];
 
   for (const modelo of modelos) {
     try {
@@ -124,21 +124,57 @@ Responda APENAS com um JSON puro no formato:
 
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(`${modelo} erro ${res.status}: ${txt}`);
+        erros.push(`${modelo} (${res.status}): ${txt.slice(0, 160)}`);
+        continue;
       }
 
       const data = await res.json();
       const raw = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!raw) throw new Error('Resposta vazia da API do Gemini');
+      if (!raw) {
+        erros.push(`${modelo}: resposta vazia`);
+        continue;
+      }
       const cleanedRaw = raw.replace(/^```json\s*/i, '').replace(/\s*```$/i, '').trim();
       const parsed = JSON.parse(cleanedRaw);
       return normalizarDestaques(parsed.jogos || [], jogos, dataStr, modelo);
     } catch (e) {
-      lastErr = e;
+      erros.push(`${modelo}: ${e.message}`);
     }
   }
 
-  throw lastErr || new Error('Falha em todos os modelos Gemini');
+  throw new Error(erros.join(' | ') || 'Falha em todos os modelos Gemini');
+}
+
+// Consulta a Google API para saber exatamente quais modelos estão disponíveis para esta chave
+async function listarModelosValidos(apiKey) {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    if (res.ok) {
+      const data = await res.json();
+      const disponiveis = (data.models || [])
+        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes('generateContent'))
+        .map(m => m.name.replace(/^models\//, ''));
+
+      if (disponiveis.length > 0) {
+        // Ordena priorizando modelos flash modernos e eficientes
+        disponiveis.sort((a, b) => {
+          const rank = name => {
+            if (name.includes('2.5-flash')) return 1;
+            if (name.includes('2.0-flash')) return 2;
+            if (name.includes('flash')) return 3;
+            if (name.includes('pro')) return 4;
+            return 10;
+          };
+          return rank(a) - rank(b);
+        });
+        return disponiveis.slice(0, 5);
+      }
+    }
+  } catch (err) {
+    console.warn('Falha ao consultar /models:', err);
+  }
+  // Fallback com modelos atuais do Google AI Studio
+  return ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 }
 
 function normalizarDestaques(itensIA, jogosOriginais, dataStr, modelo) {
